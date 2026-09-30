@@ -12,4 +12,12 @@ I saved my work in steps so you can see how it was made:
 
 To open it just double click `index.html` in any of the folders.
 
+Or run it on localhost with python:
+
+```
+python serve.py
+```
+
+That opens the finished site at http://localhost:8000/step-5-final/. To see a different step put the folder name after it, like `python serve.py step-3-colours`. Press Ctrl+C to stop.
+
 Pictures are from Wikimedia Commons.
