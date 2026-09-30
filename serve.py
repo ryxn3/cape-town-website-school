@@ -1,7 +1,7 @@
 # serve.py - runs the website on your own computer (localhost)
 #
 # How to use:
-#   python serve.py                  opens the finished site (step-5-final)
+#   python serve.py                  opens the newest version (step-6-map)
 #   python serve.py step-3-colours   opens a different step
 #
 # Press Ctrl+C to stop it.
@@ -16,8 +16,8 @@ PORT = 8000
 # the folder this file is in, so it works from anywhere
 here = os.path.dirname(os.path.abspath(__file__))
 
-# which step to open (step-5-final if you don't say)
-folder = sys.argv[1] if len(sys.argv) > 1 else "step-5-final"
+# which step to open (step-6-map if you don't say)
+folder = sys.argv[1] if len(sys.argv) > 1 else "step-6-map"
 folder = folder.strip("/\\")
 
 if not os.path.isdir(os.path.join(here, folder)):
