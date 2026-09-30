@@ -1,0 +1,80 @@
+/* first time adding css */
+
+body {
+    margin: 0;
+    font-family: 'Poppins', Arial, sans-serif;
+    color: #222;
+    line-height: 1.6;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 40px;
+    background: #1b5e87;
+}
+
+.logo {
+    color: white;
+    font-size: 22px;
+    margin: 0;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    margin-left: 25px;
+}
+
+/* picture behind the welcome text */
+.hero {
+    text-align: center;
+    padding: 150px 20px;
+    background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
+        url("https://commons.wikimedia.org/wiki/Special:FilePath/Table_Mountain_DanieVDM.jpg?width=1600") center / cover;
+    background-color: #1b5e87;
+    color: white;
+}
+
+.hero h2 {
+    color: white;
+    font-size: 48px;
+    margin: 0;
+}
+
+.btn {
+    display: inline-block;
+    background: #d6457a;
+    color: white;
+    padding: 12px 28px;
+    border-radius: 30px;
+    text-decoration: none;
+}
+
+section {
+    padding: 40px;
+}
+
+h2 {
+    color: #1b5e87;
+    text-align: center;
+}
+
+/* each place */
+.place {
+    max-width: 600px;
+    margin: 0 auto 40px;
+}
+
+.place img {
+    width: 100%;
+    border-radius: 10px;
+}
+
+footer {
+    background: #222;
+    color: #bbb;
+    text-align: center;
+    padding: 20px;
+}
