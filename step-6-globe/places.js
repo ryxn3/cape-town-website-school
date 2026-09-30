@@ -1,6 +1,6 @@
-// all the places on the map
+// all the places on the globe
 // wiki = the name of the wikipedia page, the pictures come from there
-// lat / lng = where it is (i got these from google maps)
+// lat / lng = where it is on the globe (i got these from google maps)
 
 let places = [
     {
