@@ -73,11 +73,9 @@ getPhoto(places[0], 960)
 
 // ---------- the globe ----------
 
-// grey shaded mountains from esri, free and no api key.
-// the css makes it fully grey. if you want to try a different look swap it for:
-//   Elevation/World_Hillshade   (only the mountain shadows)
-//   Canvas/World_Light_Gray_Base   (flat grey, no mountains)
-let tileLink = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/";
+// colours for the globe, just two greys
+let seaColour = "#b8b4ac";
+let landColour = "#ebe7df";
 
 let capeTown = { lat: -34.08, lng: 18.43, altitude: 0.015 };
 let space = { lat: -15, lng: 20, altitude: 2.6 };
@@ -100,46 +98,143 @@ places.forEach(function (place, i) {
     list.appendChild(li);
 });
 
+// makes the pin that goes on the globe: a dot on the place, a line and a photo
+function makeGlobePin(place) {
+    let i = places.indexOf(place);
+    let colour = types[place.type].colour;
+
+    let el = document.createElement("div");
+    el.className = "globe-pin";
+    el.innerHTML =
+        '<span class="stem"></span>' +
+        '<span class="dot" style="background:' + colour + '"></span>' +
+        '<button class="photo" style="border-color:' + colour + '">' +
+            '<img alt="">' +
+            '<b style="background:' + colour + '">' + (i + 1) + '</b>' +
+            '<span class="name">' + place.name + '</span>' +
+        '</button>';
+
+    let img = el.querySelector("img");
+    img.alt = place.name;
+    getPhoto(place, 120)
+        .then(function (src) { showPhoto(img, src); })
+        .catch(function () { showPhoto(img, null); });
+
+    el.querySelector(".photo").addEventListener("click", function () { openPlace(place.id); });
+    place.pinEl = el;
+    return el;
+}
+
+// moves the photos around so they don't sit on top of each other.
+// each photo gets a line back to its dot on the place
+let photoSize = 46;
+let spots = [];
+[55, 105, 155].forEach(function (far) {
+    // straight up and down first, then sideways
+    [-90, 90, -135, -45, 135, 45, 180, 0].forEach(function (angle) {
+        let a = angle * Math.PI / 180;
+        spots.push({ x: Math.round(Math.cos(a) * far), y: Math.round(Math.sin(a) * far), angle: angle, far: far });
+    });
+});
+
+function hits(a, b) {
+    return Math.abs(a.x - b.x) < (a.size + b.size) / 2 + 4 && Math.abs(a.y - b.y) < (a.size + b.size) / 2 + 4;
+}
+
+function spreadPins() {
+    let zoomedOut = globe.pointOfView().altitude > 0.4;
+    let shown = places.filter(function (place) {
+        return place.pinEl && place.pinEl.style.display != "none";
+    });
+
+    // the dots are taken too so a photo doesn't cover another place
+    let taken = shown.map(function (place) {
+        place.screen = globe.getScreenCoords(place.lat, place.lng, 0.0001);
+        return { x: place.screen.x, y: place.screen.y, size: 12 };
+    });
+
+    shown.forEach(function (place) {
+        let el = place.pinEl;
+        el.classList.toggle("small", zoomedOut);
+        if (zoomedOut) return;
+
+        let pick = spots[0];
+        for (let s = 0; s < spots.length; s++) {
+            let box = { x: place.screen.x + spots[s].x, y: place.screen.y + spots[s].y, size: photoSize };
+            if (!taken.some(function (t) { return hits(t, box); })) {
+                pick = spots[s];
+                taken.push(box);
+                break;
+            }
+        }
+
+        if (el.pick !== pick) {
+            el.pick = pick;
+            el.querySelector(".photo").style.transform = "translate(-50%, -50%) translate(" + pick.x + "px, " + pick.y + "px)";
+            let stem = el.querySelector(".stem");
+            stem.style.width = pick.far + "px";
+            stem.style.transform = "rotate(" + pick.angle + "deg)";
+        }
+    });
+
+    requestAnimationFrame(spreadPins);
+}
+
 let globeBox = document.getElementById("globe");
 
 // if globe.gl didn't load (no internet) the list still works
 if (window.Globe) {
+    // the land shapes are in land.js. cape town is detailed and the rest is simple
+    let land = capeLand.concat(worldLand).map(function (rings) {
+        return { geometry: { type: "Polygon", coordinates: rings } };
+    });
+
     // globe.gl empties the box it draws in, so it gets its own one
     globe = new Globe(document.getElementById("globe-3d"))
         .width(globeBox.clientWidth)
         .height(globeBox.clientHeight)
         .backgroundColor("#efe9dc")
         .showAtmosphere(false)
-        // the tiles load in more detail when you zoom in
-        .globeTileEngineUrl(function (x, y, level) {
-            return tileLink + level + "/" + y + "/" + x;
-        })
-        .globeTileEngineMaxLevel(13) // esri doesn't have more detail than this
-
+        .polygonsData(land)
+        .polygonStrokeColor(function () { return false; })
+        .polygonAltitude(0.0001)
+        .polygonsTransitionDuration(0)
         .htmlElementsData(places)
-        .htmlElement(function (place) {
-            let i = places.indexOf(place);
-            let el = document.createElement("div");
-            el.className = "globe-pin";
-            el.innerHTML = makePin(place, i + 1);
-            let name = document.createElement("span");
-            name.className = "name";
-            name.textContent = place.name;
-            el.appendChild(name);
-            el.addEventListener("click", function () { openPlace(place.id); });
-            return el;
-        })
+        .htmlAltitude(0.0001)
+        .htmlElement(makeGlobePin)
         // hide the pins when they go round the back of the globe
         .htmlElementVisibilityModifier(function (el, visible) {
             el.style.display = visible ? "" : "none";
         });
 
-    // light grey under the tiles while they are still loading
-    globe.globeMaterial().color.set("#cfcac0");
+    // the lights on the globe make the colours too bright, so the colours
+    // "glow" instead (emissive) and then they look exactly like i picked
+    function flatColour(colour) {
+        let m = globe.globeMaterial().clone();
+        m.color.set("#000000");
+        m.specular.set("#000000");
+        m.emissive.set(colour);
+        m.side = 2; // both sides
+        return m;
+    }
+    let landMat = flatColour(landColour);
+    let sideMat = flatColour("#9a958c");
+    globe.polygonCapMaterial(function () { return landMat; })
+        .polygonSideMaterial(function () { return sideMat; });
+
+    let sea = globe.globeMaterial();
+    sea.color.set("#000000");
+    sea.specular.set("#000000");
+    sea.emissive.set(seaColour);
+    // pushes the sea a tiny bit back so the land is always drawn on top (no flickering)
+    sea.polygonOffset = true;
+    sea.polygonOffsetFactor = 4;
+    sea.polygonOffsetUnits = 4;
 
     // start in space and then fly down to cape town
     globe.pointOfView(space);
     setTimeout(function () { globe.pointOfView(capeTown, 4000); }, 800);
+    requestAnimationFrame(spreadPins);
 
     window.addEventListener("resize", function () {
         globe.width(globeBox.clientWidth).height(globeBox.clientHeight);

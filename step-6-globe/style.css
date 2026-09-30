@@ -177,10 +177,6 @@ section h2 {
     background: #efe9dc;
 }
 
-/* makes the globe grey, the pins stay in colour because they are not in the canvas */
-#globe canvas {
-    filter: grayscale(1) contrast(1.15);
-}
 
 .globe-msg {
     font-family: 'Caveat', cursive;
@@ -283,31 +279,92 @@ section h2 {
     transform: none;
 }
 
-/* pins on the globe. the pin is moved up so the point is on the place */
+/* pins on the globe: a dot on the place, a line, and a round photo.
+   script.js moves the photo up or down so they don't overlap */
 .globe-pin {
     position: relative;
-    width: 28px;
-    height: 28px;
+    width: 0;
+    height: 0;
+}
+
+.globe-pin .dot {
+    position: absolute;
+    left: -5px;
+    top: -5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+/* the line goes from the dot to the photo, script.js turns it */
+.globe-pin .stem {
+    position: absolute;
+    left: 0;
+    top: -1px;
+    width: 55px;
+    height: 2px;
+    background: var(--ink);
+    transform-origin: 0 50%;
+    transform: rotate(-90deg);
+}
+
+.globe-pin .photo {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 46px;
+    height: 46px;
+    padding: 0;
+    border-radius: 50%;
+    border: 3px solid;
+    background: #d8d2c4;
     cursor: pointer;
     pointer-events: auto;
+    transform: translate(-50%, -50%) translate(0, -55px);
+    box-shadow: 1px 2px 5px rgba(0, 0, 0, 0.3);
 }
 
-.globe-pin .pin {
-    position: relative;
-    top: -20px;
-    transition: transform 0.15s;
+.globe-pin .photo:hover {
+    z-index: 5;
 }
 
-.globe-pin:hover .pin {
-    transform: rotate(-45deg) scale(1.2);
+.globe-pin .photo img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+/* the number in the corner of the photo */
+.globe-pin .photo b {
+    position: absolute;
+    right: -8px;
+    top: -8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid white;
+    color: white;
+    font-size: 11px;
+    line-height: 16px;
+    text-align: center;
+}
+
+/* when you zoom out far there is only the dots */
+.globe-pin.small .photo,
+.globe-pin.small .stem {
+    display: none;
 }
 
 /* the name shows when you hover */
 .globe-pin .name {
     display: none;
     position: absolute;
-    left: 26px;
-    top: -30px;
+    left: 50%;
+    top: 48px;
+    transform: translateX(-50%) rotate(-2deg);
     white-space: nowrap;
     background: var(--sticky);
     padding: 0 10px;
@@ -318,7 +375,7 @@ section h2 {
     box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.globe-pin:hover .name {
+.globe-pin .photo:hover .name {
     display: block;
 }
 
