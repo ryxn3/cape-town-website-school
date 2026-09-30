@@ -21,4 +21,4 @@ python serve.py
 
 That opens the newest version at http://localhost:8000/step-6-globe/. To see a different step put the folder name after it, like `python serve.py step-3-colours`. Press Ctrl+C to stop.
 
-Pictures are from Wikimedia Commons. In step 6 they load straight from the Wikipedia page of each place, and the satellite pictures on the globe are from Esri, so you need internet for those. No API keys needed.
+Pictures are from Wikimedia Commons. In step 6 they load straight from the Wikipedia page of each place, and the grey mountain shading on the globe is from Esri, so you need internet for those. No API keys needed.

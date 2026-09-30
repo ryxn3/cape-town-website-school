@@ -1,5 +1,5 @@
 // ---------- pictures from wikipedia ----------
-// the pictures come from the wikipedia page of each place,
+// i load the pictures from the wikipedia page of each place,
 // that way they always work and i don't have to download them
 
 let wikiApi = "https://en.wikipedia.org/api/rest_v1/page/";
@@ -30,7 +30,7 @@ function getPhoto(place, width) {
     });
 }
 
-// gets the other pictures on the wikipedia page
+// gets all the other pictures on the wikipedia page
 function getGallery(place) {
     return getWiki("media-list", place.wiki).then(function (data) {
         let pics = [];
@@ -38,58 +38,65 @@ function getGallery(place) {
             if (item.type != "image" || !item.srcset || !item.showInGallery) return;
             // skip maps, logos, flags and drawings
             if (/\.svg|map|logo|flag|locator|coat_of_arms|icon/i.test(item.title)) return;
+            let biggest = item.srcset[item.srcset.length - 1].src;
             pics.push({
-                small: "https:" + item.srcset[0].src,
-                big: "https:" + item.srcset[item.srcset.length - 1].src,
+                src: "https:" + item.srcset[0].src,
+                big: "https:" + biggest,
                 caption: item.caption ? item.caption.text : ""
             });
         });
-        return pics.slice(0, 8);
+        return pics.slice(0, 9);
     });
 }
 
-// put a picture in an <img> and hide it if it doesn't load
+// put a picture in an <img>, and hide it if it doesn't load
 function showPhoto(img, src) {
     img.classList.remove("broken");
-    img.onerror = function () { img.classList.add("broken"); };
-    if (src) {
-        img.src = src;
-    } else {
-        img.removeAttribute("src");
+    if (!src) {
         img.classList.add("broken");
+        img.removeAttribute("src");
+        return;
     }
+    img.onerror = function () {
+        img.classList.add("broken");
+    };
+    img.src = src;
 }
 
-// the big picture at the top of the page
-getPhoto(places[0], 1920).then(function (src) {
-    if (src) document.getElementById("hero").style.backgroundImage = "url('" + src + "')";
-}).catch(function () {});
+
+// ---------- the intro photo ----------
+
+getPhoto(places[0], 960)
+    .then(function (src) { showPhoto(document.getElementById("intro-photo"), src); })
+    .catch(function () { showPhoto(document.getElementById("intro-photo"), null); });
 
 
 // ---------- the globe ----------
+
+// grey shaded mountains from esri, free and no api key.
+// the css makes it fully grey. if you want to try a different look swap it for:
+//   Elevation/World_Hillshade   (only the mountain shadows)
+//   Canvas/World_Light_Gray_Base   (flat grey, no mountains)
+let tileLink = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/";
 
 let capeTown = { lat: -34.08, lng: 18.43, altitude: 0.015 };
 let space = { lat: -15, lng: 20, altitude: 2.6 };
 let globe = null;
 
 function makePin(place, number) {
-    let pin = document.createElement("div");
-    pin.className = "pin";
-    pin.style.background = types[place.type].colour;
-    pin.textContent = number;
-    return pin;
+    let colour = types[place.type].colour;
+    return '<span class="pin" style="background:' + colour + '"><b>' + number + '</b></span>';
 }
 
-// the list next to the globe
 let list = document.getElementById("place-list");
 
 places.forEach(function (place, i) {
-    let btn = document.createElement("button");
-    btn.appendChild(makePin(place, i + 1));
-    btn.appendChild(document.createTextNode(place.name));
-    btn.addEventListener("click", function () { openPlace(place.id); });
     let li = document.createElement("li");
-    li.appendChild(btn);
+    li.innerHTML = '<button>' + makePin(place, i + 1) +
+        '<span>' + place.name + '<small>' + place.short + '</small></span></button>';
+    li.querySelector("button").addEventListener("click", function () {
+        openPlace(place.id);
+    });
     list.appendChild(li);
 });
 
@@ -97,31 +104,38 @@ let globeBox = document.getElementById("globe");
 
 // if globe.gl didn't load (no internet) the list still works
 if (window.Globe) {
-    globeBox.innerHTML = "";
-
-    globe = new Globe(globeBox)
+    // globe.gl empties the box it draws in, so it gets its own one
+    globe = new Globe(document.getElementById("globe-3d"))
         .width(globeBox.clientWidth)
         .height(globeBox.clientHeight)
-        .backgroundColor("#0b1a26")
-        .atmosphereColor("#9fd3ff")
-        // satellite pictures from esri, they load in more detail when you zoom in
+        .backgroundColor("#efe9dc")
+        .showAtmosphere(false)
+        // the tiles load in more detail when you zoom in
         .globeTileEngineUrl(function (x, y, level) {
-            return "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/" + level + "/" + y + "/" + x;
+            return tileLink + level + "/" + y + "/" + x;
         })
+        .globeTileEngineMaxLevel(13) // esri doesn't have more detail than this
+
         .htmlElementsData(places)
         .htmlElement(function (place) {
             let i = places.indexOf(place);
-            let pin = makePin(place, i + 1);
+            let el = document.createElement("div");
+            el.className = "globe-pin";
+            el.innerHTML = makePin(place, i + 1);
             let name = document.createElement("span");
+            name.className = "name";
             name.textContent = place.name;
-            pin.appendChild(name);
-            pin.addEventListener("click", function () { openPlace(place.id); });
-            return pin;
+            el.appendChild(name);
+            el.addEventListener("click", function () { openPlace(place.id); });
+            return el;
         })
         // hide the pins when they go round the back of the globe
-        .htmlElementVisibilityModifier(function (pin, visible) {
-            pin.style.display = visible ? "" : "none";
+        .htmlElementVisibilityModifier(function (el, visible) {
+            el.style.display = visible ? "" : "none";
         });
+
+    // light grey under the tiles while they are still loading
+    globe.globeMaterial().color.set("#cfcac0");
 
     // start in space and then fly down to cape town
     globe.pointOfView(space);
@@ -131,7 +145,7 @@ if (window.Globe) {
         globe.width(globeBox.clientWidth).height(globeBox.clientHeight);
     });
 } else {
-    globeBox.querySelector(".globe-msg").textContent = "The globe didn't load, check your internet. You can still click the places in the list.";
+    globeBox.querySelector(".globe-msg").textContent = "the globe didn't load, check your internet. you can still click the places in the list!";
 }
 
 document.getElementById("zoom-out").addEventListener("click", function () {
@@ -149,12 +163,12 @@ let view = document.getElementById("place-view");
 let current = -1;
 
 function openPlace(id) {
-    // i put the place in the address so the back button closes it
+    // i put the place in the address bar so the back button closes it
     location.hash = "place/" + id;
 }
 
 function closePlace() {
-    location.hash = "places";
+    location.hash = "globe-section";
 }
 
 function showPlace(i) {
@@ -163,7 +177,7 @@ function showPlace(i) {
 
     document.getElementById("pv-name").textContent = place.name;
     document.getElementById("pv-type").textContent = types[place.type].label;
-    document.getElementById("pv-count").textContent = (i + 1) + " of " + places.length;
+    document.getElementById("pv-type").style.color = types[place.type].colour;
     document.getElementById("pv-note").textContent = place.note;
     document.getElementById("pv-tip").textContent = place.tip;
     document.getElementById("pv-wiki").href = "https://en.wikipedia.org/wiki/" + encodeURIComponent(place.wiki);
@@ -179,29 +193,30 @@ function showPlace(i) {
     let info = document.getElementById("pv-info");
     info.innerHTML = "";
     for (let label in place.info) {
-        let row = info.insertRow();
-        let th = document.createElement("th");
-        th.textContent = label;
-        row.appendChild(th);
-        row.insertCell().textContent = place.info[label];
+        let dt = document.createElement("dt");
+        let dd = document.createElement("dd");
+        dt.textContent = label;
+        dd.textContent = place.info[label];
+        info.appendChild(dt);
+        info.appendChild(dd);
     }
 
-    // main picture
+    // main photo
     let img = document.getElementById("pv-img");
     img.alt = place.name;
-    showPhoto(img, null);
+    img.removeAttribute("src");
     getPhoto(place, 1280)
         .then(function (src) { if (current == i) showPhoto(img, src); })
-        .catch(function () {});
+        .catch(function () { if (current == i) showPhoto(img, null); });
 
     // more pictures
     let gallery = document.getElementById("pv-gallery");
-    gallery.innerHTML = '<p class="loading">Loading pictures...</p>';
+    gallery.innerHTML = '<p class="loading">loading pictures...</p>';
     getGallery(place).then(function (pics) {
-        if (current != i) return; // they already went to a different place
+        if (current != i) return; // they already clicked on a different place
         gallery.innerHTML = "";
         if (pics.length == 0) {
-            gallery.innerHTML = '<p class="loading">No more pictures of this one.</p>';
+            gallery.innerHTML = '<p class="loading">no more pictures of this one sorry</p>';
         }
         pics.forEach(function (pic) {
             let btn = document.createElement("button");
@@ -209,8 +224,8 @@ function showPlace(i) {
             let small = document.createElement("img");
             small.alt = pic.caption || place.name;
             small.loading = "lazy";
-            small.src = pic.small;
-            small.onerror = function () { btn.remove(); };
+            showPhoto(small, pic.src);
+            small.addEventListener("error", function () { btn.remove(); });
             btn.appendChild(small);
             // click a small picture to make it the big one
             btn.addEventListener("click", function () {
@@ -220,7 +235,7 @@ function showPlace(i) {
             gallery.appendChild(btn);
         });
     }).catch(function () {
-        if (current == i) gallery.innerHTML = '<p class="loading">Couldn\'t load the pictures, check your internet.</p>';
+        if (current == i) gallery.innerHTML = '<p class="loading">couldn\'t load the pictures, check your internet</p>';
     });
 
     view.hidden = false;
@@ -234,10 +249,11 @@ function hidePlace() {
     document.body.classList.remove("no-scroll");
 }
 
-// runs when the # part of the address changes
+// this runs when the # part of the address changes
 function checkHash() {
-    if (location.hash.startsWith("#place/")) {
-        let id = location.hash.slice(7);
+    let hash = location.hash;
+    if (hash.startsWith("#place/")) {
+        let id = hash.slice(7);
         let i = places.findIndex(function (p) { return p.id == id; });
         if (i != -1) {
             showPlace(i);
@@ -260,7 +276,7 @@ document.getElementById("pv-prev").addEventListener("click", function () {
     openPlace(places[(current - 1 + places.length) % places.length].id);
 });
 
-// fly the globe to this place
+// close the page and fly the globe down to this place
 document.getElementById("pv-globe").addEventListener("click", function () {
     let place = places[current];
     closePlace();
@@ -281,16 +297,18 @@ let facts = [
     "Table Mountain is about 1085 metres high.",
     "The cable car on Table Mountain opened in 1929.",
     "Cape Town is called the Mother City.",
-    "At Boulders Beach you can swim in the same water as the penguins.",
+    "African penguins live at Boulders Beach and you can swim with them.",
     "The strong south-east wind is called the Cape Doctor.",
     "Kirstenbosch garden was started in 1913.",
     "Table Mountain is one of the New 7 Wonders of Nature.",
     "Cape Point is NOT where the two oceans meet, that is Cape Agulhas."
 ];
 
+let factText = document.getElementById("fact");
+
 document.getElementById("fact-btn").addEventListener("click", function () {
     let i = Math.floor(Math.random() * facts.length);
-    document.getElementById("fact").textContent = facts[i];
+    factText.textContent = facts[i];
 });
 
 

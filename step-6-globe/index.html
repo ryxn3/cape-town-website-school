@@ -4,74 +4,82 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cape Town Guide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Karla:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <header>
-        <a href="#" class="logo">Cape Town Guide</a>
+        <a href="#" class="logo">Cape Town <span>my guide</span></a>
         <nav>
-            <a href="#places">Places</a>
+            <a href="#globe-section">Globe</a>
             <a href="#food">Food</a>
             <a href="#tips">Tips</a>
         </nav>
     </header>
 
-    <!-- big picture at the top, the picture gets put in by script.js -->
-    <div class="hero" id="hero">
-        <div class="hero-text">
+    <!-- intro with a photo -->
+    <section class="intro">
+        <div class="intro-text">
             <h1>Cape Town</h1>
-            <p>Mountains, beaches, penguins and really good food. This is my guide to all the places we went to.</p>
+            <p class="hand">(the Mother City)</p>
+            <p>I went to Cape Town with my family and it is honestly one of the most beautiful places I have ever been. There are mountains, beaches, penguins and really good food.</p>
+            <p>These are all the places we went to. Click on a pin on the globe to read about it and see more pictures.</p>
         </div>
-    </div>
+        <figure class="polaroid">
+            <img id="intro-photo" alt="Table Mountain">
+            <figcaption>Table Mountain :)</figcaption>
+        </figure>
+    </section>
 
-    <!-- the globe with all the places -->
-    <section id="places">
-        <h2>Places to visit</h2>
-        <p class="intro">Drag the globe to spin it and scroll to zoom. Click on a number to read about that place.</p>
+    <!-- the globe -->
+    <section id="globe-section">
+        <h2>The globe</h2>
+        <p class="hand small">spin it, zoom it, click a pin!</p>
 
-        <div class="globe-wrap">
+        <div class="map-wrap">
             <div id="globe">
-                <p class="globe-msg">Loading the globe...</p>
+                <div id="globe-3d">
+                    <p class="globe-msg">loading the globe...</p>
+                </div>
+                <div class="globe-btns">
+                    <button id="zoom-out">zoom out</button>
+                    <button id="zoom-in">back to Cape Town</button>
+                </div>
             </div>
-            <div class="globe-side">
-                <ol id="place-list"></ol>
-                <button id="zoom-out" class="btn">Zoom out</button>
-                <button id="zoom-in" class="btn">Back to Cape Town</button>
-            </div>
+            <ol id="place-list"></ol>
         </div>
     </section>
 
     <!-- food -->
-    <section id="food" class="light">
-        <h2>Food to try</h2>
-        <table class="food">
-            <tr><th>Food</th><th>What it is</th><th>Where</th></tr>
-            <tr><td>Gatsby</td><td>A massive sandwich with chips inside. One is enough for like 3 people.</td><td>Anywhere in the Cape Flats</td></tr>
-            <tr><td>Bobotie</td><td>Spiced mince with an egg topping, usually with yellow rice.</td><td>Most restaurants</td></tr>
-            <tr><td>Cape Malay curry</td><td>Sweet and mild curry.</td><td>Bo-Kaap</td></tr>
-            <tr><td>Koeksisters</td><td>Fried dough in syrup. Very very sweet.</td><td>Bakeries</td></tr>
-            <tr><td>Fish and chips</td><td>Get it fresh from the harbour.</td><td>Kalk Bay or Hout Bay</td></tr>
-        </table>
+    <section id="food">
+        <h2>Food you have to try</h2>
+        <ul class="food-list">
+            <li><strong>Gatsby</strong> a massive sandwich with chips inside. One is enough for like 3 people.</li>
+            <li><strong>Bobotie</strong> spiced mince with an egg topping, usually with yellow rice.</li>
+            <li><strong>Cape Malay curry</strong> sweet and mild curry, best in the Bo-Kaap.</li>
+            <li><strong>Koeksisters</strong> fried dough in syrup. Very very sweet.</li>
+            <li><strong>Fish and chips</strong> get it fresh in Kalk Bay or Hout Bay.</li>
+        </ul>
     </section>
 
     <!-- tips -->
     <section id="tips">
         <h2>Good to know</h2>
         <div class="tips">
-            <div>
+            <div class="tip">
                 <h3>Weather</h3>
                 <p>Summer is December to February. The wind (the "Cape Doctor") can be really strong so bring a jacket.</p>
             </div>
-            <div>
+            <div class="tip">
                 <h3>Getting around</h3>
                 <p>Use the MyCiTi bus or Uber. Renting a car is best for Cape Point.</p>
             </div>
-            <div>
+            <div class="tip">
                 <h3>Money</h3>
                 <p>The money is the Rand (R). Most places take card.</p>
             </div>
-            <div>
+            <div class="tip">
                 <h3>Be careful</h3>
                 <p>Don't walk alone at night and keep your phone in your pocket.</p>
             </div>
@@ -79,45 +87,45 @@
 
         <div class="fact-box">
             <p id="fact">Click the button for a fun fact about Cape Town!</p>
-            <button id="fact-btn" class="btn">Give me a fact</button>
+            <button id="fact-btn">Give me a fact</button>
         </div>
     </section>
 
     <footer>
-        <p>Made by me for my school project, 2026</p>
-        <p class="small">Photos from Wikipedia. Satellite pictures on the globe from Esri.</p>
+        <p>Made by me for my school project, 2026. Pictures from Wikipedia, globe shading from Esri.</p>
     </footer>
 
-    <!-- the fullscreen page for one place (script.js fills it in) -->
+    <!-- the fullscreen page for one place (filled in by script.js) -->
     <div id="place-view" hidden>
-        <div class="pv-bar">
-            <button id="pv-close">&larr; Back</button>
-            <span id="pv-count"></span>
+        <div class="pv-top">
+            <button id="pv-close" aria-label="Close">&larr; back to the globe</button>
             <div>
-                <button id="pv-prev" aria-label="Previous place">&larr;</button>
-                <button id="pv-next" aria-label="Next place">&rarr;</button>
+                <button id="pv-prev" aria-label="Previous place">&lsaquo;</button>
+                <button id="pv-next" aria-label="Next place">&rsaquo;</button>
             </div>
         </div>
 
-        <img id="pv-img" class="pv-img" alt="">
+        <div class="pv-photo">
+            <img id="pv-img" alt="">
+        </div>
 
         <div class="pv-body">
             <div class="pv-main">
-                <h2 id="pv-name"></h2>
                 <p id="pv-type" class="pv-type"></p>
+                <h2 id="pv-name"></h2>
+                <p id="pv-note" class="note"></p>
                 <div id="pv-about"></div>
-                <p class="pv-note"><b>My note:</b> <span id="pv-note"></span></p>
-                <p class="pv-note"><b>Tip:</b> <span id="pv-tip"></span></p>
+                <p class="pv-tip"><strong>My tip:</strong> <span id="pv-tip"></span></p>
 
                 <h3>More pictures</h3>
                 <div id="pv-gallery"></div>
-                <p><a id="pv-wiki" target="_blank" rel="noopener">Read more on Wikipedia</a></p>
+                <p><a id="pv-wiki" target="_blank" rel="noopener">Read more on Wikipedia &rarr;</a></p>
             </div>
 
-            <div class="pv-side">
-                <table id="pv-info"></table>
-                <button id="pv-globe" class="btn">Show it on the globe</button>
-            </div>
+            <aside class="pv-side">
+                <dl id="pv-info"></dl>
+                <button id="pv-globe">show it on the globe</button>
+            </aside>
         </div>
     </div>
 
