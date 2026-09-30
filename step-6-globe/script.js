@@ -1,5 +1,5 @@
 // ---------- pictures from wikipedia ----------
-// i load the pictures from the wikipedia page of each place,
+// the pictures come from the wikipedia page of each place,
 // that way they always work and i don't have to download them
 
 let wikiApi = "https://en.wikipedia.org/api/rest_v1/page/";
@@ -30,7 +30,7 @@ function getPhoto(place, width) {
     });
 }
 
-// gets all the other pictures on the wikipedia page
+// gets the other pictures on the wikipedia page
 function getGallery(place) {
     return getWiki("media-list", place.wiki).then(function (data) {
         let pics = [];
@@ -38,99 +38,123 @@ function getGallery(place) {
             if (item.type != "image" || !item.srcset || !item.showInGallery) return;
             // skip maps, logos, flags and drawings
             if (/\.svg|map|logo|flag|locator|coat_of_arms|icon/i.test(item.title)) return;
-            let biggest = item.srcset[item.srcset.length - 1].src;
             pics.push({
-                src: "https:" + item.srcset[0].src,
-                big: "https:" + biggest,
+                small: "https:" + item.srcset[0].src,
+                big: "https:" + item.srcset[item.srcset.length - 1].src,
                 caption: item.caption ? item.caption.text : ""
             });
         });
-        return pics.slice(0, 9);
+        return pics.slice(0, 8);
     });
 }
 
-// put a picture in an <img>, and hide it if it doesn't load
+// put a picture in an <img> and hide it if it doesn't load
 function showPhoto(img, src) {
     img.classList.remove("broken");
-    if (!src) {
-        img.classList.add("broken");
+    img.onerror = function () { img.classList.add("broken"); };
+    if (src) {
+        img.src = src;
+    } else {
         img.removeAttribute("src");
-        return;
-    }
-    img.onerror = function () {
         img.classList.add("broken");
-    };
-    img.src = src;
+    }
 }
 
-
-// ---------- the intro photo ----------
-
-getPhoto(places[0], 960)
-    .then(function (src) { showPhoto(document.getElementById("intro-photo"), src); })
-    .catch(function () { showPhoto(document.getElementById("intro-photo"), null); });
+// the big picture at the top of the page
+getPhoto(places[0], 1920).then(function (src) {
+    if (src) document.getElementById("hero").style.backgroundImage = "url('" + src + "')";
+}).catch(function () {});
 
 
-// ---------- the big map ----------
+// ---------- the globe ----------
+
+let capeTown = { lat: -34.08, lng: 18.43, altitude: 0.015 };
+let space = { lat: -15, lng: 20, altitude: 2.6 };
+let globe = null;
 
 function makePin(place, number) {
-    let colour = types[place.type].colour;
-    return '<span class="pin" style="background:' + colour + '"><b>' + number + '</b></span>';
+    let pin = document.createElement("div");
+    pin.className = "pin";
+    pin.style.background = types[place.type].colour;
+    pin.textContent = number;
+    return pin;
 }
 
+// the list next to the globe
 let list = document.getElementById("place-list");
 
 places.forEach(function (place, i) {
+    let btn = document.createElement("button");
+    btn.appendChild(makePin(place, i + 1));
+    btn.appendChild(document.createTextNode(place.name));
+    btn.addEventListener("click", function () { openPlace(place.id); });
     let li = document.createElement("li");
-    li.innerHTML = '<button>' + makePin(place, i + 1) +
-        '<span>' + place.name + '<small>' + place.short + '</small></span></button>';
-    li.querySelector("button").addEventListener("click", function () {
-        openPlace(place.id);
-    });
+    li.appendChild(btn);
     list.appendChild(li);
 });
 
-// if leaflet didn't load (no internet) the list still works
-let bigMap = null;
-let tiles = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
-let credits = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+let globeBox = document.getElementById("globe");
 
-if (window.L) {
-    bigMap = L.map("map", { scrollWheelZoom: false });
-    L.tileLayer(tiles, { attribution: credits, maxZoom: 18 }).addTo(bigMap);
+// if globe.gl didn't load (no internet) the list still works
+if (window.Globe) {
+    globeBox.innerHTML = "";
 
-    let corners = [];
-    places.forEach(function (place, i) {
-        let icon = L.divIcon({
-            html: makePin(place, i + 1),
-            className: "",
-            iconSize: [28, 28],
-            iconAnchor: [14, 32]
+    globe = new Globe(globeBox)
+        .width(globeBox.clientWidth)
+        .height(globeBox.clientHeight)
+        .backgroundColor("#0b1a26")
+        .atmosphereColor("#9fd3ff")
+        // satellite pictures from esri, they load in more detail when you zoom in
+        .globeTileEngineUrl(function (x, y, level) {
+            return "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/" + level + "/" + y + "/" + x;
+        })
+        .htmlElementsData(places)
+        .htmlElement(function (place) {
+            let i = places.indexOf(place);
+            let pin = makePin(place, i + 1);
+            let name = document.createElement("span");
+            name.textContent = place.name;
+            pin.appendChild(name);
+            pin.addEventListener("click", function () { openPlace(place.id); });
+            return pin;
+        })
+        // hide the pins when they go round the back of the globe
+        .htmlElementVisibilityModifier(function (pin, visible) {
+            pin.style.display = visible ? "" : "none";
         });
-        L.marker([place.lat, place.lng], { icon: icon })
-            .addTo(bigMap)
-            .bindTooltip(place.name, { direction: "top", offset: [0, -30] })
-            .on("click", function () { openPlace(place.id); });
-        corners.push([place.lat, place.lng]);
+
+    // start in space and then fly down to cape town
+    globe.pointOfView(space);
+    setTimeout(function () { globe.pointOfView(capeTown, 4000); }, 800);
+
+    window.addEventListener("resize", function () {
+        globe.width(globeBox.clientWidth).height(globeBox.clientHeight);
     });
-    bigMap.fitBounds(corners, { padding: [30, 30] });
+} else {
+    globeBox.querySelector(".globe-msg").textContent = "The globe didn't load, check your internet. You can still click the places in the list.";
 }
+
+document.getElementById("zoom-out").addEventListener("click", function () {
+    if (globe) globe.pointOfView(space, 3000);
+});
+
+document.getElementById("zoom-in").addEventListener("click", function () {
+    if (globe) globe.pointOfView(capeTown, 3000);
+});
 
 
 // ---------- the fullscreen page for one place ----------
 
 let view = document.getElementById("place-view");
 let current = -1;
-let smallMap = null;
-let smallMarker = null;
 
 function openPlace(id) {
-    // i put the place in the address bar so the back button closes it
+    // i put the place in the address so the back button closes it
     location.hash = "place/" + id;
 }
 
 function closePlace() {
-    location.hash = "map-section";
+    location.hash = "places";
 }
 
 function showPlace(i) {
@@ -139,7 +163,7 @@ function showPlace(i) {
 
     document.getElementById("pv-name").textContent = place.name;
     document.getElementById("pv-type").textContent = types[place.type].label;
-    document.getElementById("pv-type").style.color = types[place.type].colour;
+    document.getElementById("pv-count").textContent = (i + 1) + " of " + places.length;
     document.getElementById("pv-note").textContent = place.note;
     document.getElementById("pv-tip").textContent = place.tip;
     document.getElementById("pv-wiki").href = "https://en.wikipedia.org/wiki/" + encodeURIComponent(place.wiki);
@@ -155,30 +179,29 @@ function showPlace(i) {
     let info = document.getElementById("pv-info");
     info.innerHTML = "";
     for (let label in place.info) {
-        let dt = document.createElement("dt");
-        let dd = document.createElement("dd");
-        dt.textContent = label;
-        dd.textContent = place.info[label];
-        info.appendChild(dt);
-        info.appendChild(dd);
+        let row = info.insertRow();
+        let th = document.createElement("th");
+        th.textContent = label;
+        row.appendChild(th);
+        row.insertCell().textContent = place.info[label];
     }
 
-    // main photo
+    // main picture
     let img = document.getElementById("pv-img");
     img.alt = place.name;
-    img.removeAttribute("src");
+    showPhoto(img, null);
     getPhoto(place, 1280)
         .then(function (src) { if (current == i) showPhoto(img, src); })
-        .catch(function () { if (current == i) showPhoto(img, null); });
+        .catch(function () {});
 
     // more pictures
     let gallery = document.getElementById("pv-gallery");
-    gallery.innerHTML = '<p class="loading">loading pictures...</p>';
+    gallery.innerHTML = '<p class="loading">Loading pictures...</p>';
     getGallery(place).then(function (pics) {
-        if (current != i) return; // they already clicked on a different place
+        if (current != i) return; // they already went to a different place
         gallery.innerHTML = "";
         if (pics.length == 0) {
-            gallery.innerHTML = '<p class="loading">no more pictures of this one sorry</p>';
+            gallery.innerHTML = '<p class="loading">No more pictures of this one.</p>';
         }
         pics.forEach(function (pic) {
             let btn = document.createElement("button");
@@ -186,8 +209,8 @@ function showPlace(i) {
             let small = document.createElement("img");
             small.alt = pic.caption || place.name;
             small.loading = "lazy";
-            showPhoto(small, pic.src);
-            small.addEventListener("error", function () { btn.remove(); });
+            small.src = pic.small;
+            small.onerror = function () { btn.remove(); };
             btn.appendChild(small);
             // click a small picture to make it the big one
             btn.addEventListener("click", function () {
@@ -197,30 +220,12 @@ function showPlace(i) {
             gallery.appendChild(btn);
         });
     }).catch(function () {
-        if (current == i) gallery.innerHTML = '<p class="loading">couldn\'t load the pictures, check your internet</p>';
+        if (current == i) gallery.innerHTML = '<p class="loading">Couldn\'t load the pictures, check your internet.</p>';
     });
 
     view.hidden = false;
     view.scrollTop = 0;
     document.body.classList.add("no-scroll");
-
-    // little map on the side
-    if (window.L) {
-        if (!smallMap) {
-            smallMap = L.map("pv-map", { scrollWheelZoom: false });
-            L.tileLayer(tiles, { attribution: credits, maxZoom: 18 }).addTo(smallMap);
-            smallMarker = L.marker([place.lat, place.lng]).addTo(smallMap);
-        }
-        smallMap.invalidateSize();
-        smallMap.setView([place.lat, place.lng], 13);
-        smallMarker.setLatLng([place.lat, place.lng]);
-        smallMarker.setIcon(L.divIcon({
-            html: makePin(place, i + 1),
-            className: "",
-            iconSize: [28, 28],
-            iconAnchor: [14, 32]
-        }));
-    }
 }
 
 function hidePlace() {
@@ -229,11 +234,10 @@ function hidePlace() {
     document.body.classList.remove("no-scroll");
 }
 
-// this runs when the # part of the address changes
+// runs when the # part of the address changes
 function checkHash() {
-    let hash = location.hash;
-    if (hash.startsWith("#place/")) {
-        let id = hash.slice(7);
+    if (location.hash.startsWith("#place/")) {
+        let id = location.hash.slice(7);
         let i = places.findIndex(function (p) { return p.id == id; });
         if (i != -1) {
             showPlace(i);
@@ -256,6 +260,13 @@ document.getElementById("pv-prev").addEventListener("click", function () {
     openPlace(places[(current - 1 + places.length) % places.length].id);
 });
 
+// fly the globe to this place
+document.getElementById("pv-globe").addEventListener("click", function () {
+    let place = places[current];
+    closePlace();
+    if (globe) globe.pointOfView({ lat: place.lat, lng: place.lng, altitude: 0.004 }, 2500);
+});
+
 document.addEventListener("keydown", function (e) {
     if (current == -1) return;
     if (e.key == "Escape") closePlace();
@@ -270,18 +281,16 @@ let facts = [
     "Table Mountain is about 1085 metres high.",
     "The cable car on Table Mountain opened in 1929.",
     "Cape Town is called the Mother City.",
-    "African penguins live at Boulders Beach and you can swim with them.",
+    "At Boulders Beach you can swim in the same water as the penguins.",
     "The strong south-east wind is called the Cape Doctor.",
     "Kirstenbosch garden was started in 1913.",
     "Table Mountain is one of the New 7 Wonders of Nature.",
     "Cape Point is NOT where the two oceans meet, that is Cape Agulhas."
 ];
 
-let factText = document.getElementById("fact");
-
 document.getElementById("fact-btn").addEventListener("click", function () {
     let i = Math.floor(Math.random() * facts.length);
-    factText.textContent = facts[i];
+    document.getElementById("fact").textContent = facts[i];
 });
 
 
